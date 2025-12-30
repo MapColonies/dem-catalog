@@ -4,10 +4,10 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 
 SET search_path TO "DemCatalogManager", public; -- CHANGE SCHEMA NAME TO MATCH ENVIRONMENT
-CREATE TYPE product_status AS ENUM ('PUBLISHED', 'UNPUBLISHED'); 
-CREATE TYPE product_type AS ENUM ('DTM', 'DSM', 'QuantizedMeshDTM', 'QuantizedMeshDSM', 'Terrain', 'TerrainRGB'); 
-CREATE TYPE data_type AS ENUM ('FLOAT64', 'FLOAT32', 'FLOAT16', 'INT64', 'INT32', 'INT16', 'INT8'); 
-CREATE TYPE pixel_type AS ENUM ('PUBLISHED', 'UNPUBLISHED'); 
+CREATE TYPE product_status AS ENUM ('PUBLISHED', 'UNPUBLISHED');
+CREATE TYPE product_type AS ENUM ('DTM', 'DSM', 'TerrainRGB', 'QuantizedMeshDTM', 'QuantizedMeshDSM', 'QuantizedMeshDTMBest', 'QuantizedMeshDSMBest');
+CREATE TYPE data_type AS ENUM ('FLOAT64', 'FLOAT32', 'FLOAT16', 'INT64', 'INT32', 'INT16', 'INT8');
+CREATE TYPE pixel_type AS ENUM ('Area', 'Point');
 -- Table: records
 -- DROP TABLE records;
 CREATE TABLE records
@@ -22,8 +22,8 @@ CREATE TABLE records
     ingestion_date_utc timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     insert_date_utc timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_date_utc timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    acquisition_time_begin_utc timestamp with time zone NOT NULL,
-    acquisition_time_end_utc timestamp with time zone NOT NULL,
+    acquisition_time_begin_utc timestamp with time zone NOT NULL CHECK (acquisition_time_begin_utc < now()),
+    acquisition_time_end_utc timestamp with time zone NOT NULL CHECK (acquisition_time_end_utc < now()),
     min_resolution_degree numeric NOT NULL,
     max_resolution_degree numeric NOT NULL,
     min_resolution_meter numeric NOT NULL,
@@ -40,13 +40,13 @@ CREATE TABLE records
     srs_name text COLLATE pg_catalog."default" NOT NULL,
     region text COLLATE pg_catalog."default" NOT NULL CHECK (region <> ''),
     data_type data_type NOT NULL,
-    no_data_value numeric NOT NULL,
+    no_data_value numeric NOT NULL DEFAULT -32768,
     classification text COLLATE pg_catalog."default" NOT NULL CHECK (classification ~* '^[0-9]$|^[1-9][0-9]$|^(100)$'),
     description text COLLATE pg_catalog."default",
     area_or_point pixel_type NOT NULL,
     footprint_geojson text COLLATE pg_catalog."default" NOT NULL,
     wkt_geometry text COLLATE pg_catalog."default",
-    wkb_geometry geometry(Geometry,4326),
+    wkb_geometry geometry(Geometry,4326) CHECK (st_isvalid(wkb_geometry)),
     links text COLLATE pg_catalog."default" NOT NULL,
     keywords text COLLATE pg_catalog."default",
     typename text COLLATE pg_catalog."default" NOT NULL,
@@ -57,55 +57,54 @@ CREATE TABLE records
     anytext_tsvector tsvector,
     type text COLLATE pg_catalog."default" NOT NULL,
     display_path text COLLATE pg_catalog."default" NOT NULL,
-    
     CONSTRAINT records_pkey PRIMARY KEY (identifier),
     CONSTRAINT unique_record_values UNIQUE (product_id, product_type)
 );
 
 
--- Index: ix_product_id
--- DROP INDEX ix_product_id;
-CREATE INDEX ix_product_id
+-- Index: product_id_idx
+-- DROP INDEX product_id_idx;
+CREATE INDEX product_id_idx
     ON records USING btree
     (product_id COLLATE pg_catalog."default" ASC NULLS LAST);
 
--- Index: ix_product_name
--- DROP INDEX ix_product_name;
-CREATE INDEX ix_product_name
+-- Index: product_name_idx
+-- DROP INDEX product_name_idx;
+CREATE INDEX product_name_idx
     ON records USING btree
     (product_name COLLATE pg_catalog."default" ASC NULLS LAST);
 
--- Index: ix_product_type
--- DROP INDEX ix_product_type;
-CREATE INDEX ix_product_type ON records (product_type);
+-- Index: product_type_idx
+-- DROP INDEX product_type_idx;
+CREATE INDEX product_type_idx ON records (product_type);
 
--- Index: ix_ingestion_date_utc
--- DROP INDEX ix_ingestion_date_utc;
-CREATE INDEX ix_ingestion_date_utc
+-- Index: ingestion_date_utc_idx
+-- DROP INDEX ingestion_date_utc_idx;
+CREATE INDEX ingestion_date_utc_idx
     ON records USING btree
     (ingestion_date_utc ASC NULLS LAST);
 
--- Index: ix_acquisition_time_begin_utc
--- DROP INDEX ix_acquisition_time_begin_utc;
-CREATE INDEX ix_acquisition_time_begin_utc
+-- Index: acquisition_time_begin_utc_idx
+-- DROP INDEX acquisition_time_begin_utc_idx;
+CREATE INDEX acquisition_time_begin_utc_idx
     ON records USING btree
     (acquisition_time_begin_utc ASC NULLS LAST);
 
--- Index: ix_acquisition_time_end_utc
--- DROP INDEX ix_acquisition_time_end_utc;
-CREATE INDEX ix_acquisition_time_end_utc
+-- Index: acquisition_time_end_utc_idx
+-- DROP INDEX acquisition_time_end_utc_idx;
+CREATE INDEX acquisition_time_end_utc_idx
     ON records USING btree
     (acquisition_time_end_utc ASC NULLS LAST);
 
--- Index: ix_min_resolution_meter
--- DROP INDEX ix_min_resolution_meter;
-CREATE INDEX ix_min_resolution_meter
+-- Index: min_resolution_meter_idx
+-- DROP INDEX min_resolution_meter_idx;
+CREATE INDEX min_resolution_meter_idx
     ON records USING btree
-    (min_resolution_meter ASC);    
+    (min_resolution_meter ASC);
 
--- Index: ix_max_resolution_meter
--- DROP INDEX ix_max_resolution_meter;
-CREATE INDEX ix_max_resolution_meter
+-- Index: max_resolution_meter_idx
+-- DROP INDEX max_resolution_meter_idx;
+CREATE INDEX max_resolution_meter_idx
     ON records USING btree
     (max_resolution_meter ASC);
 
@@ -128,7 +127,7 @@ CREATE FUNCTION records_update_anytext() RETURNS trigger
     SET search_path FROM CURRENT
     LANGUAGE plpgsql
     AS $$
-BEGIN   
+BEGIN
   IF TG_OP = 'INSERT' THEN
     NEW.anytext := CONCAT (
       NEW.product_name,' ',
