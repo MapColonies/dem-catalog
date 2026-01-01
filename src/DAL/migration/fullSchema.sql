@@ -41,7 +41,7 @@ CREATE TABLE records
     srs_name text COLLATE pg_catalog."default" NOT NULL,
     region text COLLATE pg_catalog."default" NOT NULL CHECK (region <> ''),
     data_type data_type NOT NULL,
-    no_data_value numeric NOT NULL DEFAULT -32768,
+    no_data_value numeric NOT NULL,
     classification text COLLATE pg_catalog."default" NOT NULL CHECK (classification ~* '^[0-9]$|^[1-9][0-9]$|^(100)$'),
     description text COLLATE pg_catalog."default",
     area_or_point pixel_type NOT NULL,
