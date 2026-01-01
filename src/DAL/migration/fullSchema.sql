@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 
 SET search_path TO "DemCatalogManager", public; -- CHANGE SCHEMA NAME TO MATCH ENVIRONMENT
-CREATE TYPE product_status AS ENUM ('PUBLISHED', 'UNPUBLISHED');
+CREATE TYPE product_status AS ENUM ('PUBLISHED', 'UNPUBLISHED', 'BEING_DELETED');
 CREATE TYPE product_type AS ENUM ('DTM', 'DSM', 'TerrainRGB', 'QuantizedMeshDTM', 'QuantizedMeshDSM', 'QuantizedMeshDTMBest', 'QuantizedMeshDSMBest');
 CREATE TYPE data_type AS ENUM ('FLOAT64', 'FLOAT32', 'FLOAT16', 'INT64', 'INT32', 'INT16', 'INT8');
 CREATE TYPE pixel_type AS ENUM ('Area', 'Point');
@@ -16,7 +16,8 @@ CREATE TABLE records
     product_status product_status NOT NULL DEFAULT 'UNPUBLISHED',
     product_id text COLLATE pg_catalog."default" NOT NULL CHECK (product_id ~* '^[a-zA-Z0-9_-]+$'),
     product_type product_type NOT NULL DEFAULT 'DTM',
-    product_name text COLLATE pg_catalog."default",
+    product_sub_type text COLLATE pg_catalog."default",
+    product_name text COLLATE pg_catalog."default" NOT NULL CHECK (product_name <> ''),
     product_version numeric NOT NULL CHECK (product_version >= 0) DEFAULT 1,
     producer_name text COLLATE pg_catalog."default" DEFAULT 'IDFMU',
     ingestion_date_utc timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -76,7 +77,15 @@ CREATE INDEX product_name_idx
 
 -- Index: product_type_idx
 -- DROP INDEX product_type_idx;
-CREATE INDEX product_type_idx ON records (product_type);
+CREATE INDEX product_type_idx
+    ON records USING btree
+    (product_type COLLATE pg_catalog."default" ASC NULLS LAST);
+
+-- Index: product_sub_type_idx
+-- DROP INDEX product_sub_type_idx;
+CREATE INDEX product_sub_type_idx
+    ON records USING btree
+    (product_sub_type COLLATE pg_catalog."default" ASC NULLS LAST);
 
 -- Index: ingestion_date_utc_idx
 -- DROP INDEX ingestion_date_utc_idx;
