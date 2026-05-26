@@ -35,7 +35,6 @@ CREATE TABLE records
     max_relative_accuracy_lep_90 numeric,
     min_horizontal_accuracy_cep_90 numeric,
     max_horizontal_accuracy_cep_90 numeric,
-    geoid_model text COLLATE pg_catalog."default" NOT NULL,
     sensors text COLLATE pg_catalog."default" NOT NULL,
     srs_id text COLLATE pg_catalog."default" NOT NULL,
     srs_name text COLLATE pg_catalog."default" NOT NULL,
