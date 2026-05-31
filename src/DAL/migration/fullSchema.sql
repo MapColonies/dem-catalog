@@ -59,7 +59,7 @@ CREATE TABLE records
     type text COLLATE pg_catalog."default" NOT NULL,
     display_path text COLLATE pg_catalog."default" NOT NULL,
     vertical_type vertical_type NOT NULL,
-    vertical_srs_id integer NOT NULL,
+    vertical_srs_id text NOT NULL,
     vertical_srs_name text NOT NULL CHECK (vertical_srs_name <> ''),
     CONSTRAINT records_pkey PRIMARY KEY (identifier),
     CONSTRAINT unique_record_values UNIQUE (product_id, product_type)
