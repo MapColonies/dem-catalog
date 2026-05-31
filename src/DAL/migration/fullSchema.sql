@@ -8,6 +8,7 @@ CREATE TYPE product_status AS ENUM ('PUBLISHED', 'UNPUBLISHED', 'BEING_DELETED')
 CREATE TYPE product_type AS ENUM ('DTM', 'DSM', 'TerrainRGB', 'QuantizedMeshDTM', 'QuantizedMeshDSM', 'QuantizedMeshDTMBest', 'QuantizedMeshDSMBest');
 CREATE TYPE data_type AS ENUM ('FLOAT64', 'FLOAT32', 'FLOAT16', 'INT64', 'INT32', 'INT16', 'INT8');
 CREATE TYPE pixel_type AS ENUM ('Area', 'Point');
+CREATE TYPE vertical_type AS ENUM ('Orthometric', 'Ellipsoidal');
 -- Table: records
 -- DROP TABLE records;
 CREATE TABLE records
@@ -35,10 +36,9 @@ CREATE TABLE records
     max_relative_accuracy_lep_90 numeric,
     min_horizontal_accuracy_cep_90 numeric,
     max_horizontal_accuracy_cep_90 numeric,
-    geoid_model text COLLATE pg_catalog."default" NOT NULL,
     sensors text COLLATE pg_catalog."default" NOT NULL,
     srs_id text COLLATE pg_catalog."default" NOT NULL,
-    srs_name text COLLATE pg_catalog."default" NOT NULL,
+    srs_name text COLLATE pg_catalog."default" NOT NULL CHECK (srs_name <> ''),
     region text COLLATE pg_catalog."default" NOT NULL CHECK (region <> ''),
     data_type data_type NOT NULL,
     no_data_value numeric NOT NULL,
@@ -58,6 +58,9 @@ CREATE TABLE records
     anytext_tsvector tsvector,
     type text COLLATE pg_catalog."default" NOT NULL,
     display_path text COLLATE pg_catalog."default" NOT NULL,
+    vertical_type vertical_type NOT NULL,
+    vertical_srs_id text NOT NULL,
+    vertical_srs_name text NOT NULL CHECK (vertical_srs_name <> ''),
     CONSTRAINT records_pkey PRIMARY KEY (identifier),
     CONSTRAINT unique_record_values UNIQUE (product_id, product_type)
 );
