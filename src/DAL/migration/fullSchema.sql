@@ -37,7 +37,7 @@ CREATE TABLE records
     min_horizontal_accuracy_cep_90 numeric,
     max_horizontal_accuracy_cep_90 numeric,
     sensors text COLLATE pg_catalog."default" NOT NULL,
-    srs_id integer COLLATE pg_catalog."default" NOT NULL,
+    srs_id text COLLATE pg_catalog."default" NOT NULL,
     srs_name text COLLATE pg_catalog."default" NOT NULL CHECK (srs_name <> ''),
     region text COLLATE pg_catalog."default" NOT NULL CHECK (region <> ''),
     data_type data_type NOT NULL,
